@@ -8043,7 +8043,7 @@ static int cmd_mkbp_get(int argc, char *argv[])
 	union ec_response_get_next_data r;
 	int rv;
 	int i;
-	uint32_t supported;
+	uint32_t supported = 0;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <buttons|switches>\n", argv[0]);

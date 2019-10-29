@@ -8,8 +8,12 @@ SCRIPT="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT")"
 
 EC_DIR="$(readlink -f "${SCRIPT_DIR}/..")"
-if [[ "$(basename "${EC_DIR}")" != "ec" ]]; then
-	EC_DIR=
+CHROOT="$HOME/chromiumos"
+
+if ! [[ -e /etc/cros_chroot_version ]]; then
+	rsync -a "$EC_DIR/" "$CHROOT/chroot/tmp/ec"
+	cd "$CHROOT"
+	exec src/chromium/depot_tools/cros_sdk -- /tmp/ec/util/flash_ec "$@"
 fi
 
 # Loads script libraries.
