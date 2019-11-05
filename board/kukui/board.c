@@ -3,7 +3,6 @@
  * found in the LICENSE file.
  */
 
-#include "adc.h"
 #include "adc_chip.h"
 #include "button.h"
 #include "charge_manager.h"
@@ -16,9 +15,7 @@
 #include "driver/accelgyro_bmi160.h"
 #include "driver/als_tcs3400.h"
 #include "driver/bc12/pi3usb9201.h"
-#include "driver/charger/rt946x.h"
 #include "driver/sync.h"
-#include "driver/tcpm/mt6370.h"
 #include "driver/usb_mux/it5205.h"
 #include "extpower.h"
 #include "gpio.h"
@@ -45,27 +42,7 @@
 #define CPRINTS(format, args...) cprints(CC_USBCHARGE, format, ## args)
 #define CPRINTF(format, args...) cprintf(CC_USBCHARGE, format, ## args)
 
-static void tcpc_alert_event(enum gpio_signal signal)
-{
-	schedule_deferred_pd_interrupt(0 /* port */);
-}
-
-static void gauge_interrupt(enum gpio_signal signal)
-{
-	task_wake(TASK_ID_CHARGER);
-}
-
 #include "gpio_list.h"
-
-/******************************************************************************/
-/* ADC channels. Must be in the exactly same order as in enum adc_channel. */
-const struct adc_t adc_channels[] = {
-	[ADC_BOARD_ID] = {"BOARD_ID", 3300, 4096, 0, STM32_AIN(10)},
-	[ADC_EC_SKU_ID] = {"EC_SKU_ID", 3300, 4096, 0, STM32_AIN(8)},
-	[ADC_BATT_ID] = {"BATT_ID", 3300, 4096, 0, STM32_AIN(7)},
-	[ADC_POGO_ADC_INT_L] = {"POGO_ADC_INT_L", 3300, 4096, 0, STM32_AIN(6)},
-};
-BUILD_ASSERT(ARRAY_SIZE(adc_channels) == ADC_CH_COUNT);
 
 /******************************************************************************/
 /* I2C ports */
@@ -91,17 +68,6 @@ const struct spi_device_t spi_devices[] = {
 const unsigned int spi_devices_used = ARRAY_SIZE(spi_devices);
 
 /******************************************************************************/
-const struct tcpc_config_t tcpc_config[CONFIG_USB_PD_PORT_MAX_COUNT] = {
-	{
-		.bus_type = EC_BUS_TYPE_I2C,
-		.i2c_info = {
-			.port = I2C_PORT_TCPC0,
-			.addr_flags = MT6370_TCPC_I2C_ADDR_FLAGS,
-		},
-		.drv = &mt6370_tcpm_drv,
-	},
-};
-
 void board_set_dp_mux_control(int output_enable, int polarity)
 {
 	if (board_get_version() >= 5)
@@ -110,47 +76,6 @@ void board_set_dp_mux_control(int output_enable, int polarity)
 	gpio_set_level(GPIO_USB_C0_DP_OE_L, !output_enable);
 	if (output_enable)
 		gpio_set_level(GPIO_USB_C0_DP_POLARITY, polarity);
-}
-
-static void board_hpd_update(int port, int hpd_lvl, int hpd_irq)
-{
-	/*
-	 * svdm_dp_attention() did most of the work, we only need to notify
-	 * host here.
-	 */
-	host_set_single_event(EC_HOST_EVENT_USB_MUX);
-}
-
-__override const struct rt946x_init_setting *board_rt946x_init_setting(void)
-{
-	static const struct rt946x_init_setting battery_init_setting = {
-		.eoc_current = 140,
-		.mivr = 4000,
-		.ircmp_vclamp = 32,
-		.ircmp_res = 25,
-		.boost_voltage = 5050,
-		.boost_current = 1500,
-	};
-
-	return &battery_init_setting;
-}
-
-struct usb_mux usb_muxes[CONFIG_USB_PD_PORT_MAX_COUNT] = {
-	{
-		.port_addr = IT5205_I2C_ADDR1_FLAGS,
-		.driver = &it5205_usb_mux_driver,
-		.hpd_update = &board_hpd_update,
-	},
-};
-
-uint16_t tcpc_get_alert_status(void)
-{
-	uint16_t status = 0;
-
-	if (!gpio_get_level(GPIO_USB_C0_PD_INT_ODL))
-		status |= PD_STATUS_TCPC_ALERT_0;
-
-	return status;
 }
 
 static int force_discharge;
@@ -234,10 +159,7 @@ int extpower_is_present(void)
 
 int pd_snk_is_vbus_provided(int port)
 {
-	if (port)
-		panic("Invalid charge port\n");
-
-	return rt946x_is_vbus_ready();
+	return 1;
 }
 
 #if defined(BOARD_KUKUI) || defined(BOARD_KODAMA)
@@ -256,37 +178,7 @@ static void board_init(void)
 		gpio_set_level(GPIO_PMIC_FORCE_RESET_ODL, 1);
 	}
 
-	/* Enable TCPC alert interrupts */
-	gpio_enable_interrupt(GPIO_USB_C0_PD_INT_ODL);
-
-	/* Enable charger interrupts */
-	gpio_enable_interrupt(GPIO_CHARGER_INT_ODL);
-
-#ifdef SECTION_IS_RW
-	/* Enable interrupts from BMI160 sensor. */
-	gpio_enable_interrupt(GPIO_ACCEL_INT_ODL);
-
-	/* Enable interrupt for the camera vsync. */
-	gpio_enable_interrupt(GPIO_SYNC_INT);
-#endif /* SECTION_IS_RW */
-
-	/* Enable interrupt from PMIC. */
-	gpio_enable_interrupt(GPIO_PMIC_EC_RESETB);
-
-	/* Enable gauge interrupt from max17055 */
-	gpio_enable_interrupt(GPIO_GAUGE_INT_ODL);
-
-	if (IS_ENABLED(BOARD_KRANE)) {
-		/*
-		 * Fix backlight led maximum current:
-		 * tolerance 120mA * 0.75 = 90mA.
-		 * (b/133655155)
-		 */
-		mt6370_backlight_set_dim(MT6370_BLDIM_DEFAULT * 3 / 4);
-	}
-
-	/* Enable pogo charging signal */
-	gpio_enable_interrupt(GPIO_POGO_VBUS_PRESENT);
+	return;
 }
 DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 
@@ -302,16 +194,6 @@ static void board_rev_init(void)
 	if (IS_ENABLED(BOARD_KUKUI) && board_get_version() == 1)
 		gpio_set_flags(GPIO_BC12_DET_EN, GPIO_ODR_HIGH);
 
-	if (board_get_version() >= 2 && board_get_version() < 4) {
-		/* Display bias settings. */
-		mt6370_db_set_voltages(6000, 5800, 5800);
-
-		/*
-		 * Enable MT6370 DB_POSVOUT/DB_NEGVOUT (controlled by _EN pins).
-		 */
-		mt6370_db_external_control(1);
-	}
-
 	if (board_get_version() == 2) {
 		/* configure PI3USB9201 to USB Path ON Mode */
 		i2c_write8(I2C_PORT_BC12, BC12_I2C_ADDR_FLAGS,
@@ -323,8 +205,6 @@ static void board_rev_init(void)
 	if (board_get_version() < 5) {
 		gpio_set_flags(GPIO_USB_C0_DP_OE_L, GPIO_OUT_HIGH);
 		gpio_set_flags(GPIO_USB_C0_DP_POLARITY, GPIO_OUT_LOW);
-		usb_muxes[0].driver = &virtual_usb_mux_driver;
-		usb_muxes[0].hpd_update = &virtual_hpd_update;
 	}
 }
 DECLARE_HOOK(HOOK_INIT, board_rev_init, HOOK_PRIO_INIT_ADC + 1);

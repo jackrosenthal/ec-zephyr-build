@@ -1489,6 +1489,7 @@ void charger_init(void)
 }
 DECLARE_HOOK(HOOK_INIT, charger_init, HOOK_PRIO_DEFAULT);
 
+#ifdef TASK_ID_CHARGER
 /* Wake up the task when something important happens */
 static void charge_wakeup(void)
 {
@@ -1496,6 +1497,7 @@ static void charge_wakeup(void)
 }
 DECLARE_HOOK(HOOK_CHIPSET_RESUME, charge_wakeup, HOOK_PRIO_DEFAULT);
 DECLARE_HOOK(HOOK_AC_CHANGE, charge_wakeup, HOOK_PRIO_DEFAULT);
+#endif
 
 #ifdef CONFIG_EC_EC_COMM_BATTERY_MASTER
 /* Reset the base on S5->S0 transition. */

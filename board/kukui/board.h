@@ -19,15 +19,9 @@
 #define VARIANT_KUKUI_CHARGER_MT6370
 #define VARIANT_KUKUI_DP_MUX_GPIO
 
-#ifndef SECTION_IS_RW
 #define VARIANT_KUKUI_NO_SENSORS
-#endif /* SECTION_IS_RW */
 
 #include "baseboard.h"
-
-#define CONFIG_USB_MUX_IT5205
-#define CONFIG_USB_MUX_VIRTUAL
-#define CONFIG_VOLUME_BUTTONS
 
 /* Battery */
 #ifdef BOARD_KRANE
@@ -45,33 +39,6 @@
 #undef CONFIG_CHARGER_MT6370_BC12_GPIO
 #endif
 
-/* Motion Sensors */
-#ifdef SECTION_IS_RW
-#ifndef BOARD_KRANE
-#define CONFIG_MAG_BMI160_BMM150
-#define CONFIG_ACCELGYRO_SEC_ADDR_FLAGS BMM150_ADDR0_FLAGS
-#define CONFIG_MAG_CALIBRATE
-#endif /* !BOARD_KRANE */
-#define CONFIG_ACCELGYRO_BMI160
-#define CONFIG_ACCEL_INTERRUPTS
-#define CONFIG_ACCELGYRO_BMI160_INT_EVENT \
-	TASK_EVENT_MOTION_SENSOR_INTERRUPT(LID_ACCEL)
-#define CONFIG_ALS
-
-#define ALS_COUNT 1
-#define CONFIG_ALS_TCS3400
-#define CONFIG_ALS_TCS3400_INT_EVENT \
-	TASK_EVENT_MOTION_SENSOR_INTERRUPT(CLEAR_ALS)
-#define CONFIG_ALS_TCS3400_EMULATED_IRQ_EVENT
-#define CONFIG_ACCEL_FORCE_MODE_MASK BIT(CLEAR_ALS)
-
-/* Camera VSYNC */
-#define CONFIG_SYNC
-#define CONFIG_SYNC_COMMAND
-#define CONFIG_SYNC_INT_EVENT \
-	TASK_EVENT_MOTION_SENSOR_INTERRUPT(VSYNC)
-#endif /* SECTION_IS_RW */
-
 /* I2C ports */
 #define I2C_PORT_CHARGER  0
 #define I2C_PORT_TCPC0    0
@@ -85,21 +52,7 @@
 /* Route sbs host requests to virtual battery driver */
 #define VIRTUAL_BATTERY_ADDR_FLAGS 0x0B
 
-/* Define the host events which are allowed to wakeup AP in S3. */
-#define CONFIG_MKBP_HOST_EVENT_WAKEUP_MASK \
-		(EC_HOST_EVENT_MASK(EC_HOST_EVENT_LID_OPEN) |\
-		 EC_HOST_EVENT_MASK(EC_HOST_EVENT_POWER_BUTTON))
-
 #ifndef __ASSEMBLER__
-
-enum adc_channel {
-	/* Real ADC channels begin here */
-	ADC_BOARD_ID = 0,
-	ADC_EC_SKU_ID,
-	ADC_BATT_ID,
-	ADC_POGO_ADC_INT_L,
-	ADC_CH_COUNT
-};
 
 /* power signal definitions */
 enum power_signal {
@@ -112,16 +65,10 @@ enum power_signal {
 
 /* Motion sensors */
 enum sensor_id {
-	LID_ACCEL = 0,
-	LID_GYRO,
-#ifdef CONFIG_MAG_BMI160_BMM150
-	LID_MAG,
-#endif /* CONFIG_MAG_BMI160_BMM150 */
-	CLEAR_ALS,
-	RGB_ALS,
-	VSYNC,
 	SENSOR_COUNT,
 };
+
+#undef CONFIG_LID_SWITCH
 
 enum charge_port {
 	CHARGE_PORT_USB_C,
@@ -132,11 +79,6 @@ enum charge_port {
 
 #include "gpio_signal.h"
 #include "registers.h"
-
-#ifdef SECTION_IS_RO
-/* Interrupt handler for emmc task */
-void emmc_cmd_interrupt(enum gpio_signal signal);
-#endif
 
 void board_reset_pd_mcu(void);
 int board_get_version(void);

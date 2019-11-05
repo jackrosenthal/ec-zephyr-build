@@ -3,8 +3,6 @@
  * found in the LICENSE file.
  */
 
-#include "adc.h"
-#include "adc_chip.h"
 #include "gpio.h"
 #include "hooks.h"
 #include "registers.h"
@@ -78,40 +76,7 @@ BUILD_ASSERT(ARRAY_SIZE(kukui_boards) == BOARD_VERSION_COUNT);
 
 int board_get_version(void)
 {
-	static int version = BOARD_VERSION_UNKNOWN;
-	int mv;
-	int i;
-
-	if (version != BOARD_VERSION_UNKNOWN)
-		return version;
-
-	gpio_set_level(GPIO_EC_BOARD_ID_EN_L, 0);
-	/* Wait to allow cap charge */
-	msleep(10);
-	mv = adc_read_channel(ADC_BOARD_ID);
-
-	if (mv == ADC_READ_ERROR)
-		mv = adc_read_channel(ADC_BOARD_ID);
-
-	gpio_set_level(GPIO_EC_BOARD_ID_EN_L, 1);
-
-	for (i = 0; i < BOARD_VERSION_COUNT; ++i) {
-		if (mv < kukui_boards[i].expect_mv + THRESHOLD_MV) {
-			version = kukui_boards[i].version;
-			break;
-		}
-	}
-
-	/*
-	 * For devices without pogo, Disable ADC module after we detect the
-	 * board version, since this is the only thing ADC module needs to do
-	 * for this board.
-	 */
-	if (CONFIG_DEDICATED_CHARGE_PORT_COUNT == 0 &&
-			version != BOARD_VERSION_UNKNOWN)
-		adc_disable();
-
-	return version;
+	return BOARD_VERSION_REV2;
 }
 
 static void baseboard_spi_init(void)

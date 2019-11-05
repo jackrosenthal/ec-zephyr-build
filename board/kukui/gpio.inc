@@ -11,15 +11,6 @@
  */
 
 /* Interrupts */
-GPIO_INT(USB_C0_PD_INT_ODL, PIN(B, 1), GPIO_INT_FALLING | GPIO_PULL_UP,
-         tcpc_alert_event)
-GPIO_INT(VOLUME_UP_L,       PIN(B, 10), GPIO_INT_BOTH | GPIO_PULL_UP,
-         button_interrupt) /* EC_VOLUP_BTN_ODL */
-GPIO_INT(VOLUME_DOWN_L,     PIN(B, 11), GPIO_INT_BOTH | GPIO_PULL_UP,
-         button_interrupt) /* EC_VOLDN_BTN_ODL */
-GPIO_INT(POWER_BUTTON_L,    PIN(A, 0),  GPIO_INT_BOTH | GPIO_PULL_UP,
-         power_button_interrupt) /* EC_PWR_BTN_ODL */
-
 GPIO_INT(AP_IN_SLEEP_L,     PIN(C, 12), GPIO_INT_BOTH | GPIO_PULL_DOWN,
          power_signal_interrupt)
 GPIO_INT(PMIC_EC_RESETB,    PIN(B, 7),  GPIO_INT_BOTH | GPIO_PULL_DOWN,
@@ -29,22 +20,8 @@ GPIO_INT(WARM_RESET_REQ,    PIN(A, 3),  GPIO_INT_RISING | GPIO_PULL_DOWN,
 GPIO_INT(AP_EC_WATCHDOG_L,  PIN(C, 2),  GPIO_INT_FALLING,
          chipset_watchdog_interrupt)
 
-GPIO_INT_RW(ACCEL_INT_ODL,  PIN(A, 4), GPIO_INT_FALLING | GPIO_SEL_1P8V | GPIO_PULL_UP,
-         bmi160_interrupt)
-GPIO_INT(CHARGER_INT_ODL,   PIN(C, 13), GPIO_INT_FALLING | GPIO_PULL_UP,
-         rt946x_interrupt)
-GPIO_INT_RO(EMMC_CMD,       PIN(B, 15), GPIO_INT_FALLING,
-         emmc_cmd_interrupt)
-GPIO_INT(SPI1_NSS,          PIN(A, 15), GPIO_INT_BOTH,
-         spi_event)
 GPIO_INT_RW(SYNC_INT,       PIN(A, 8),  GPIO_INT_RISING | GPIO_PULL_DOWN,
          sync_interrupt)
-GPIO_INT(HALL_INT_L,        PIN(C, 5),  GPIO_INT_BOTH,
-         lid_interrupt)
-GPIO_INT(GAUGE_INT_ODL,     PIN(C, 9),  GPIO_INT_FALLING | GPIO_PULL_UP,
-         gauge_interrupt)
-GPIO_INT(POGO_ADC_INT_L,    PIN(A, 6),  GPIO_INT_BOTH,
-         pogo_adc_interrupt)
 
 /* unused */
 GPIO(POGO_VBUS_PRESENT, PIN(A, 14), GPIO_INPUT)
