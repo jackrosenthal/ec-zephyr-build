@@ -275,6 +275,7 @@ endif
 include test/build.mk
 include util/build.mk
 include util/lock/build.mk
+include zephyr/build.mk
 
 includes+=$(includes-y)
 
@@ -306,6 +307,7 @@ all-obj-$(1)+=$(call objs_from_dir_p,fuzz,$(PROJECT),$(1))
 else
 all-obj-$(1)+=$(call objs_from_dir_p,test,$(PROJECT),$(1))
 endif
+all-obj-$(1)+=$(call objs_from_dir_p,zephyr,zephyr,$(1))
 endef
 
 # Get all sources to build

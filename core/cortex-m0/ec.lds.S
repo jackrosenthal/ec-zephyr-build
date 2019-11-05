@@ -14,6 +14,30 @@
 #define FW_SIZE_(section) CONFIG_##section##_SIZE
 #define FW_SIZE(section) FW_SIZE_(section)
 
+/*
+ * generate a symbol to mark the start of the device initialization objects for
+ * the specified level, then link all of those objects (sorted by priority);
+ * ensure the objects aren't discarded if there is no direct reference to them
+ */
+
+#define DEVICE_INIT_LEVEL(level)				\
+		__device_##level##_start = .;			\
+		KEEP(*(SORT(.init_##level[0-9])));		\
+		KEEP(*(SORT(.init_##level[1-9][0-9])));	\
+
+/*
+ * link in device initialization objects for all devices that are automatically
+ * initialized by the kernel; the objects are sorted in the order they will be
+ * initialized (i.e. ordered by level, sorted by priority within a level)
+ */
+
+#define DEVICE_INIT_SECTIONS()			\
+		__device_init_start = .;	\
+		DEVICE_INIT_LEVEL(PRE_KERNEL_1)	\
+		DEVICE_INIT_LEVEL(PRE_KERNEL_2)	\
+		DEVICE_INIT_LEVEL(POST_KERNEL)	\
+		DEVICE_INIT_LEVEL(APPLICATION)	\
+		__device_init_end = .;
 
 OUTPUT_FORMAT(BFD_FORMAT, BFD_FORMAT, BFD_FORMAT)
 OUTPUT_ARCH(BFD_ARCH)
@@ -182,6 +206,29 @@ SECTIONS
         KEEP(*(.rodata.usb_ep.usb_iface_request))
 
         . = ALIGN(4);
+
+        __data_rom_start = .;
+        __data_rom_end = .;
+
+        __static_thread_data_list_start = .;
+        __static_thread_data_list_end = .;
+
+        DEVICE_INIT_SECTIONS()
+
+        __init_array_start = .;
+        KEEP(*(SORT_BY_NAME(".init_array*")))
+        __init_array_end = .;
+
+	. = ALIGN(4);
+	_ramfunc_ram_start = .;
+	*(.ramfunc)
+	*(".ramfunc.*")
+	. = ALIGN(4);
+	_ramfunc_ram_end = .;
+	_ramfunc_ram_size = _ramfunc_ram_end - _ramfunc_ram_start;
+	_ramfunc_rom_start = _ramfunc_ram_start;
+
+        . = ALIGN(4);
         *(.rodata*)
 
 #if defined(SECTION_IS_RO) && defined(CONFIG_FLASH)
@@ -198,7 +245,11 @@ SECTIONS
 	 * STM chips for relocating the vector table.
 	 */
 	. = ALIGN(8);
+	_vector_start = .;
 	*(.bss.vector_table)
+	KEEP(*(.exc_vector_table))
+	KEEP(*(.vectors))
+	_vector_end = .;
 	. = ALIGN(8);
     } > IRAM
 
@@ -247,6 +298,11 @@ SECTIONS
         *(.data.tasks)
         *(.data)
         . = ALIGN(4);
+        __data_ram_start = .;
+	*(".data.*")
+	*(".kernel.*")
+        . = ALIGN(4);
+        __data_ram_end = .;
         *(.iram.text)
         . = ALIGN(4);
         __data_end = .;
